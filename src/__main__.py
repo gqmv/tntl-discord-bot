@@ -3,6 +3,7 @@ import discord.client
 from discord.ext import commands
 
 from config import (
+    DATABASE_URL,
     DISCORD_TOKEN,
     POSTGRES_DB,
     POSTGRES_HOST,
@@ -29,9 +30,14 @@ if not (
 if not POSTGRES_PORT.isdigit():
     raise ValueError("POSTGRES_PORT must be a number.")
 
-db_service = DatabaseService(
-    POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, int(POSTGRES_PORT)
+
+conn_string = (
+    DATABASE_URL
+    if DATABASE_URL
+    else f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
+
+db_service = DatabaseService(conn_string)
 db_service.migrate()
 
 

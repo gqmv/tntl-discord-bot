@@ -4,8 +4,8 @@ import psycopg
 
 
 class DatabaseService:
-    def __init__(self, user: str, password: str, db: str, host: str, port: int):
-        self._connection_string = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    def __init__(self, conn_string: str):
+        self._connection_string = conn_string
 
     def get_connection(self):
         return psycopg.connect(self._connection_string)
