@@ -1,6 +1,7 @@
+import logging
+
 import discord
 import discord.client
-import logging
 from discord.ext import commands
 
 from config import (
@@ -125,9 +126,11 @@ async def define_tntl_channel(ctx: discord.ApplicationContext, max_submissions: 
 class TntlMessageView(discord.ui.View):
     def __init__(self, tntl_message_id: int):
         self.tntl_message_id = tntl_message_id
-        super().__init__()
+        super().__init__(timeout=None)
 
-    @discord.ui.button(label="Upvote", style=discord.ButtonStyle.success)
+    @discord.ui.button(
+        label="Upvote", style=discord.ButtonStyle.success, custom_id="upvote_button"
+    )
     async def upvote(self, button: discord.ui.Button, interaction: discord.Interaction):
         user = interaction.user
 
