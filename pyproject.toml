@@ -1,0 +1,10 @@
+[project]
+name = "tntl-discord-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg[binary]>=3.2.3",
+    "py-cord>=2.6.1",
+]
