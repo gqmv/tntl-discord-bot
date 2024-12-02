@@ -18,16 +18,19 @@ intents.message_content = True
 
 bot = discord.bot.Bot(intents=intents)
 
-if not (
+db_url_defined = DATABASE_URL is not None
+db_url_fields_defined = (
     POSTGRES_USER
     and POSTGRES_PASSWORD
     and POSTGRES_DB
     and POSTGRES_HOST
     and POSTGRES_PORT
-):
+)
+
+if not db_url_defined and not db_url_fields_defined:
     raise ValueError("Missing environment variables.")
 
-if not POSTGRES_PORT.isdigit():
+if db_url_fields_defined and not POSTGRES_PORT.isdigit():
     raise ValueError("POSTGRES_PORT must be a number.")
 
 
