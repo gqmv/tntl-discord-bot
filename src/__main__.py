@@ -69,31 +69,6 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
 
 
-@bot.event
-async def on_message(message: discord.Message):
-    discord_channel_id = message.channel.id
-    tntl_channel_id = db_service.get_tntl_channel_id(discord_channel_id)
-
-    if not tntl_channel_id:
-        return
-
-    message_sender_id = message.author.id
-    bot_user = bot.user
-
-    if not bot_user:
-        logger.error("Bot user ID not found")
-        raise ValueError("Bot user ID not found.")
-
-    if message_sender_id == bot_user.id:
-        return
-
-    await message.delete()
-    logger.info(f"Deleted direct message from user {message_sender_id} in TNTL channel {discord_channel_id}")
-    await message.author.send(
-        "Please do not submit messages directly to the channel. Instead, use the `/submit-tntl-message` command."
-    )
-
-
 @bot.slash_command(name="ping", description="Ping the bot")
 async def ping(ctx):
     logger.debug(f"Ping command received from {ctx.author.id}")
@@ -153,34 +128,73 @@ class TntlMessageView(discord.ui.View):
 
         await interaction.respond("Upvote submitted.", ephemeral=True)
 
+class NonTntlChannelError(Exception):
+    pass
+
+class SubmissionLimitExceededError(Exception):
+    pass
+
+async def process_submission(url: str, channel: discord.TextChannel, submitter_id: int):
+    tntl_channel_id = db_service.get_tntl_channel_id(channel.id)
+
+    if not tntl_channel_id:
+        logger.warning(f"Attempted to submit message to non-TNTL channel {channel.id}")
+        raise NonTntlChannelError
+
+    if not db_service.can_submit_tntl_message(tntl_channel_id, submitter_id):
+        logger.info(
+            f"User {submitter_id} exceeded submission limit in channel {channel.id}"
+        )
+        raise SubmissionLimitExceededError
+
+    tntl_message_id = db_service.submit_tntl_message(url, tntl_channel_id, submitter_id)
+    logger.info(f"New TNTL message {tntl_message_id} submitted by user {submitter_id}")
+
+    await channel.send(url, view=TntlMessageView(tntl_message_id))
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    discord_channel_id = message.channel.id
+    tntl_channel_id = db_service.get_tntl_channel_id(discord_channel_id)
+
+    if not tntl_channel_id:
+        return
+
+    message_sender_id = message.author.id
+    bot_user = bot.user
+
+    if not bot_user:
+        logger.error("Bot user ID not found")
+        raise ValueError("Bot user ID not found.")
+
+    if message_sender_id == bot_user.id:
+        return
+
+    message_text = message.content
+    try:
+        await process_submission(message_text, message.channel, message_sender_id)  # type: ignore
+    except NonTntlChannelError:
+        await message.author.send("This is not a Try Not To Laugh channel.")
+    except SubmissionLimitExceededError:
+        await message.author.send(
+            "You have already submitted the maximum number of messages for this channel."
+        )
+
 
 @bot.slash_command(
     name="submit-tntl-message", description="Submit a message to Try Not To Laugh."
 )
 async def submit_tntl_message(ctx: discord.ApplicationContext, url: str):
-    channel_id = ctx.channel.id
-    submitter_id = ctx.author.id
-
-    tntl_channel_id = db_service.get_tntl_channel_id(channel_id)
-
-    if not tntl_channel_id:
-        logger.warning(f"Attempted to submit message to non-TNTL channel {channel_id}")
+    try:
+        await process_submission(url, ctx.channel, ctx.author.id)
+    except NonTntlChannelError:
         await ctx.respond("This is not a Try Not To Laugh channel.", ephemeral=True)
-        return
-
-    if not db_service.can_submit_tntl_message(tntl_channel_id, submitter_id):
-        logger.info(f"User {submitter_id} exceeded submission limit in channel {channel_id}")
+    except SubmissionLimitExceededError:
         await ctx.respond(
             "You have already submitted the maximum number of messages for this channel.",
             ephemeral=True,
         )
-        return
-
-    tntl_message_id = db_service.submit_tntl_message(url, tntl_channel_id, submitter_id)
-    logger.info(f"New TNTL message {tntl_message_id} submitted by user {submitter_id}")
-
-    await ctx.send(url, view=TntlMessageView(tntl_message_id))
-    await ctx.respond("Message submitted.", ephemeral=True)
 
 
 @bot.slash_command(name="end-tntl-cycle", description="End the Try Not To Laugh cycle.")
