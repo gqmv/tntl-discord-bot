@@ -118,7 +118,7 @@ class TntlMessageView(discord.ui.View):
             return
 
         if not db_service.check_tntl_message_exists(self.tntl_message_id):
-            await interaction.response.send_message(
+            await interaction.respond(
                 "This message is no longer available.", ephemeral=True
             )
             return
