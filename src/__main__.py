@@ -181,6 +181,8 @@ async def on_message(message: discord.Message):
             "You have already submitted the maximum number of messages for this channel."
         )
 
+    await message.delete()
+
 
 @bot.slash_command(
     name="submit-tntl-message", description="Submit a message to Try Not To Laugh."
