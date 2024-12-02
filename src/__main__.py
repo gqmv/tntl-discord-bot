@@ -115,6 +115,9 @@ class TntlMessageView(discord.ui.View):
         user = interaction.user
 
         if not user:
+            await interaction.respond(
+                "You must be logged in to upvote.", ephemeral=True
+            )
             return
 
         if not db_service.check_tntl_message_exists(self.tntl_message_id):
