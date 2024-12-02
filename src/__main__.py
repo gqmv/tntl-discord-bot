@@ -40,7 +40,7 @@ if not db_url_defined and not db_url_fields_defined:
     logger.error("Missing required environment variables")
     raise ValueError("Missing environment variables.")
 
-if db_url_fields_defined and not POSTGRES_PORT.isdigit():
+if db_url_fields_defined and not POSTGRES_PORT.isdigit():  # type: ignore
     logger.error("Invalid POSTGRES_PORT value")
     raise ValueError("POSTGRES_PORT must be a number.")
 
