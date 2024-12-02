@@ -125,7 +125,7 @@ class TntlMessageView(discord.ui.View):
 
         db_service.upvote_tntl_message(self.tntl_message_id, user.id)
 
-        await interaction.response.send_message("Upvote submitted.", ephemeral=True)
+        await interaction.respond("Upvote submitted.", ephemeral=True)
 
 
 @bot.slash_command(
