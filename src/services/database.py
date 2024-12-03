@@ -21,6 +21,11 @@ class DatabaseService:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS tntl_message (id BIGSERIAL PRIMARY KEY, message_text TEXT NOT NULL, tntl_channel_id BIGINT NOT NULL REFERENCES tntl_channel(id) ON DELETE CASCADE, submitter_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"
             )
+            conn.execute("ALTER TABLE IF EXISTS tntl_message RENAME TO tntl_submission")
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS tntl_submission_message (id BIGSERIAL PRIMARY KEY, tntl_submission_id BIGINT NOT NULL REFERENCES tntl_submission(id) ON DELETE CASCADE, discord_message_id BIGINT NOT NULL, UNIQUE(tntl_submission_id))"
+            )
 
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS tntl_message_upvote (id BIGSERIAL PRIMARY KEY, tntl_message_id BIGINT NOT NULL REFERENCES tntl_message(id) ON DELETE CASCADE, user_id BIGINT NOT NULL, UNIQUE(tntl_message_id, user_id))"
@@ -49,7 +54,7 @@ class DatabaseService:
         with self.get_connection() as conn:
             return (
                 conn.execute(
-                    "SELECT COUNT(*) FROM tntl_message WHERE id = %s",
+                    "SELECT COUNT(*) FROM tntl_submission WHERE id = %s",
                     (tntl_message_id,),
                 ).fetchone()[0]
                 > 0
@@ -62,7 +67,7 @@ class DatabaseService:
                 (tntl_channel_id,),
             ).fetchone()[0]
             submission_count = conn.execute(
-                "SELECT COUNT(*) FROM tntl_message WHERE tntl_channel_id = %s AND submitter_id = %s",
+                "SELECT COUNT(*) FROM tntl_submission WHERE tntl_channel_id = %s AND submitter_id = %s",
                 (tntl_channel_id, submitter_id),
             ).fetchone()[0]
             return submission_count < max_submissions
@@ -72,7 +77,7 @@ class DatabaseService:
     ) -> int:
         with self.get_connection() as conn:
             return conn.execute(
-                "INSERT INTO tntl_message (message_text, tntl_channel_id, submitter_id) VALUES (%s, %s, %s) RETURNING id",
+                "INSERT INTO tntl_submission (message_text, tntl_channel_id, submitter_id) VALUES (%s, %s, %s) RETURNING id",
                 (message_text, tntl_channel_id, submitter_id),
             ).fetchone()[0]
 
@@ -124,6 +129,53 @@ class DatabaseService:
     def end_tntl_cycle(self, tntl_channel_id: int):
         with self.get_connection() as conn:
             conn.execute(
-                "DELETE FROM tntl_message WHERE tntl_channel_id = %s",
+                "DELETE FROM tntl_submission WHERE tntl_channel_id = %s",
                 (tntl_channel_id,),
             )
+
+    @dataclass
+    class TntlSubmission:
+        id: int
+        message_text: str
+        submitter_id: int
+
+    def get_tntl_submissions(self, tntl_channel_id: int) -> list[TntlSubmission]:
+        with self.get_connection() as conn:
+            result = conn.execute(
+                "SELECT id, message_text, submitter_id FROM tntl_submission WHERE tntl_channel_id = %s",
+                (tntl_channel_id,),
+            ).fetchall()
+            return [
+                self.TntlSubmission(id, message_text, submitter_id)
+                for id, message_text, submitter_id in result
+            ]
+
+    def link_tntl_submission_to_discord_message(
+        self, tntl_submission_id: int, discord_message_id: int
+    ):
+        with self.get_connection() as conn:
+            conn.execute(
+                "INSERT INTO tntl_submission_message (tntl_submission_id, discord_message_id) VALUES (%s, %s)",
+                (tntl_submission_id, discord_message_id),
+            )
+
+    def get_discord_message_id_by_tntl_submission_id(
+        self, tntl_submission_id: int
+    ) -> int | None:
+        with self.get_connection() as conn:
+            return conn.execute(
+                "SELECT discord_message_id FROM tntl_submission_message WHERE tntl_submission_id = %s",
+                (tntl_submission_id,),
+            ).fetchone()[0]
+
+    def get_upvote_count_by_tntl_submission_id(self, tntl_submission_id: int) -> int:
+        with self.get_connection() as conn:
+            return conn.execute(
+                "SELECT COUNT(*) FROM tntl_message_upvote WHERE tntl_message_id = %s",
+                (tntl_submission_id,),
+            ).fetchone()[0]
+
+    def get_tntl_submission_ids(self) -> list[int]:
+        with self.get_connection() as conn:
+            result = conn.execute("SELECT id FROM tntl_submission").fetchall()
+            return [id for (id,) in result]
