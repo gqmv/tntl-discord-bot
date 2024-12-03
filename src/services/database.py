@@ -19,9 +19,8 @@ class DatabaseService:
             )
 
             conn.execute(
-                "CREATE TABLE IF NOT EXISTS tntl_message (id BIGSERIAL PRIMARY KEY, message_text TEXT NOT NULL, tntl_channel_id BIGINT NOT NULL REFERENCES tntl_channel(id) ON DELETE CASCADE, submitter_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+                "CREATE TABLE IF NOT EXISTS tntl_submission (id BIGSERIAL PRIMARY KEY, message_text TEXT NOT NULL, tntl_channel_id BIGINT NOT NULL REFERENCES tntl_channel(id) ON DELETE CASCADE, submitter_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"
             )
-            conn.execute("ALTER TABLE IF EXISTS tntl_message RENAME TO tntl_submission")
 
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS tntl_submission_message (id BIGSERIAL PRIMARY KEY, tntl_submission_id BIGINT NOT NULL REFERENCES tntl_submission(id) ON DELETE CASCADE, discord_message_id BIGINT NOT NULL, UNIQUE(tntl_submission_id))"
