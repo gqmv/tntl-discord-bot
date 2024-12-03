@@ -98,7 +98,7 @@ def register_commands(bot: discord.Bot, db_service: DatabaseService):
             await ctx.respond("This is not a Try Not To Laugh channel.", ephemeral=True)
             return
 
-        logger.info(f"Ending TNTL cycle in channel {channel_id}")
+        logger.info(f"Ending TNTL cycle in channel {channel_id}") 
         top_upvoted_messages = db_service.get_top_upvoted_messages(tntl_channel_id)
 
         top_upvoted_messages_text = "Here are the top upvoted messages:\n"

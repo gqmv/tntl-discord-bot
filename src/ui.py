@@ -28,13 +28,13 @@ def get_tntl_message_view(tntl_submission_id: int, db_service: DatabaseService, 
                 )
                 return
 
-            if not self.db_service.check_tntl_message_exists(self.tntl_submission_id):
+            if not self.db_service.check_tntl_submission_exists(self.tntl_submission_id):
                 await interaction.respond(
                     "This message is no longer available. (Error 1)", ephemeral=True
                 )
                 return
 
-            self.db_service.upvote_tntl_message(self.tntl_submission_id, user.id)
+            self.db_service.upvote_tntl_submission(self.tntl_submission_id, user.id)
 
             discord_message_id = (
                 self.db_service.get_discord_message_id_by_tntl_submission_id(
@@ -87,3 +87,5 @@ def get_tntl_message_embed(url: str, upvote_count: int):
             discord.EmbedField(name="Upvotes", value=str(upvote_count), inline=True),
         ],
     )
+
+

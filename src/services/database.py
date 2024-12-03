@@ -27,7 +27,7 @@ class DatabaseService:
             )
 
             conn.execute(
-                "CREATE TABLE IF NOT EXISTS tntl_message_upvote (id BIGSERIAL PRIMARY KEY, tntl_message_id BIGINT NOT NULL REFERENCES tntl_message(id) ON DELETE CASCADE, user_id BIGINT NOT NULL, UNIQUE(tntl_message_id, user_id))"
+                "CREATE TABLE IF NOT EXISTS tntl_submission_upvote (id BIGSERIAL PRIMARY KEY, tntl_submission_id BIGINT NOT NULL REFERENCES tntl_submission(id) ON DELETE CASCADE, user_id BIGINT NOT NULL, UNIQUE(tntl_submission_id, user_id))"
             )
             print("Database migrated.")
 
@@ -49,12 +49,12 @@ class DatabaseService:
             ).fetchone()
             return result[0] if result else None
 
-    def check_tntl_message_exists(self, tntl_message_id: int) -> bool:
+    def check_tntl_submission_exists(self, tntl_submission_id: int) -> bool:
         with self.get_connection() as conn:
             return (
                 conn.execute(
                     "SELECT COUNT(*) FROM tntl_submission WHERE id = %s",
-                    (tntl_message_id,),
+                    (tntl_submission_id,),
                 ).fetchone()[0]
                 > 0
             )
@@ -80,11 +80,11 @@ class DatabaseService:
                 (message_text, tntl_channel_id, submitter_id),
             ).fetchone()[0]
 
-    def upvote_tntl_message(self, tntl_message_id: int, user_id: int):
+    def upvote_tntl_submission(self, tntl_submission_id: int, user_id: int):
         with self.get_connection() as conn:
             conn.execute(
-                "INSERT INTO tntl_message_upvote (tntl_message_id, user_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                (tntl_message_id, user_id),
+                "INSERT INTO tntl_submission_upvote (tntl_submission_id, user_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                (tntl_submission_id, user_id),
             )
 
     @dataclass
@@ -100,8 +100,8 @@ class DatabaseService:
             result = conn.execute(
                 """
                 SELECT m.message_text, COUNT(u.user_id), m.submitter_id 
-                FROM tntl_message m
-                LEFT JOIN tntl_message_upvote u ON m.id = u.tntl_message_id
+                FROM tntl_submission m
+                LEFT JOIN tntl_submission_upvote u ON m.id = u.tntl_submission_id
                 WHERE m.tntl_channel_id = %s
                 GROUP BY m.id, m.message_text, m.submitter_id
                 ORDER BY COUNT(u.user_id) DESC 
@@ -120,7 +120,7 @@ class DatabaseService:
     ) -> list[int]:
         with self.get_connection() as conn:
             result = conn.execute(
-                "SELECT user_id FROM tntl_message_upvote WHERE tntl_message_id IN (SELECT id FROM tntl_message WHERE tntl_channel_id = %s) GROUP BY user_id ORDER BY COUNT(tntl_message_id) DESC LIMIT %s",
+                "SELECT user_id FROM tntl_submission_upvote WHERE tntl_submission_id IN (SELECT id FROM tntl_submission WHERE tntl_channel_id = %s) GROUP BY user_id ORDER BY COUNT(tntl_submission_id) DESC LIMIT %s",
                 (tntl_channel_id, limit),
             ).fetchall()
             return [user_id for (user_id,) in result]
@@ -170,7 +170,7 @@ class DatabaseService:
     def get_upvote_count_by_tntl_submission_id(self, tntl_submission_id: int) -> int:
         with self.get_connection() as conn:
             return conn.execute(
-                "SELECT COUNT(*) FROM tntl_message_upvote WHERE tntl_message_id = %s",
+                "SELECT COUNT(*) FROM tntl_submission_upvote WHERE tntl_submission_id = %s",
                 (tntl_submission_id,),
             ).fetchone()[0]
 

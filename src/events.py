@@ -17,7 +17,7 @@ def register_events(bot: discord.Bot, db_service: DatabaseService):
 
         print(f"Logged in as {bot.user}")
 
-    @bot.event
+    @bot.event 
     async def on_message(message: discord.Message):
         discord_channel_id = message.channel.id
         tntl_channel_id = db_service.get_tntl_channel_id(discord_channel_id)
