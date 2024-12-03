@@ -1,10 +1,12 @@
+import random
+
 import discord
 from discord.ext import commands
 
 from checks import is_admin_check
 from config import logger
 from services.database import DatabaseService
-from ui import get_tntl_message_view, get_tntl_message_embed
+from ui import get_tntl_message_embed, get_tntl_message_view
 from utils import NonTntlChannelError, SubmissionLimitExceededError, process_submission
 
 
@@ -72,15 +74,21 @@ def register_commands(bot: discord.Bot, db_service: DatabaseService):
             return
 
         tntl_submissions = db_service.get_tntl_submissions(tntl_channel_id)
+        random.shuffle(tntl_submissions)
+
         logger.info(
             f"Starting TNTL watch party in channel {tntl_channel_id} with {len(tntl_submissions)} submissions"
         )
 
+        await ctx.channel.send("Here are the submissions for this watch party:")
+
         for submission in tntl_submissions:
+            upvote_count = db_service.get_upvote_count_by_tntl_submission_id(submission.id)
             submission_message = await ctx.channel.send(
-                embed=get_tntl_message_embed(submission.message_text, 0),
+                embed=get_tntl_message_embed(submission.message_text, upvote_count),
                 view=get_tntl_message_view(submission.id, db_service, bot),
             )
+            db_service.delete_submission_messages(submission.id)
             db_service.link_tntl_submission_to_discord_message(
                 submission.id, submission_message.id
             )

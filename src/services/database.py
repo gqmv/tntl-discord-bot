@@ -178,3 +178,10 @@ class DatabaseService:
         with self.get_connection() as conn:
             result = conn.execute("SELECT id FROM tntl_submission").fetchall()
             return [id for (id,) in result]
+
+    def delete_submission_messages(self, tntl_submission_id: int):
+        with self.get_connection() as conn:
+            conn.execute(
+                "DELETE FROM tntl_submission_message WHERE tntl_submission_id = %s",
+                (tntl_submission_id,),
+            )
